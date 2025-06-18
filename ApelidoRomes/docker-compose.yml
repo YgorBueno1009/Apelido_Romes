@@ -1,19 +1,29 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8
     container_name: mysql
     restart: always
     environment:
+      # Cria um banco de dados chamado 'apelidos_db'
       MYSQL_DATABASE: apelidos_db
+      # Cria um usuário para a aplicação chamado 'user'
       MYSQL_USER: user
+      # Define a senha 'password' para o usuário 'user'
       MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: 17101030Yy*
+      # Define uma senha PARA O SEU USUÁRIO ROOT LOCAL. Pode ser qualquer uma.
+      MYSQL_ROOT_PASSWORD: 'admin'
     ports:
-      - "3306:3306"
+      # Mapeia a porta 3307 da sua máquina para a 3306 do contêiner
+      - "3307:3306"
     volumes:
+      # Garante que os dados do seu banco local sejam salvos
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      # Verifica se o banco de dados está pronto antes de continuar
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   apelido-romes:
     build: .
@@ -21,14 +31,17 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/apelidos_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 17101030Yy*
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/apelidos_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      # A aplicação usará o usuário 'user' para se conectar
+      SPRING_DATASOURCE_USERNAME: user
+      # A aplicação usará a senha 'password' para se conectar
+      SPRING_DATASOURCE_PASSWORD: password
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQL8Dialect
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
 
 volumes:
   mysql_data:
